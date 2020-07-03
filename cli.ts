@@ -7,6 +7,7 @@ import { Text } from "https://deno.land/x/args@2.0.2/value-types.ts";
 import { PARSE_FAILURE } from "https://deno.land/x/args@2.0.2/symbols.ts";
 import * as path from "https://deno.land/std/path/mod.ts";
 import { readFileStrSync } from "https://deno.land/std/fs/read_file_str.ts";
+import { expandGlobSync } from "https://deno.land/std/fs/expand_glob.ts";
 import { parse } from "https://deno.land/std/encoding/yaml.ts";
 import { Swagger } from "./types.ts";
 import { swaggerToTs } from "./converter.ts";
@@ -42,10 +43,10 @@ if (parserRes.tag === PARSE_FAILURE) {
     }
   };
 
-  const file = readFileStrSync(
-    getTargetPath(parserRes.value.input),
-  );
-  const swagger = parse(file) as Swagger;
-  const ts = swaggerToTs(swagger);
-  console.log(ts);
+  for (const walk of expandGlobSync(getTargetPath(parserRes.value.input))) {
+    const file = readFileStrSync(walk.path);
+    const swagger = parse(file) as Swagger;
+    const ts = swaggerToTs(swagger);
+    console.log(ts);
+  }
 }

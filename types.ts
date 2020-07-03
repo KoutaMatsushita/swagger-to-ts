@@ -23,7 +23,11 @@ export type SwaggerReferenceProperty = {
 
 export type SwaggerArrayProperty = {
   type: "array";
-  items: SwaggerReferenceProperty | SwaggerPrimitiveProperty;
+  items:
+    | SwaggerReferenceProperty
+    | SwaggerPrimitiveProperty
+    | SwaggerObjectProperty
+    | SwaggerArrayProperty;
 };
 
 export type SwaggerObjectProperty = {
