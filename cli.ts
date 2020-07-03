@@ -46,5 +46,6 @@ if (parserRes.tag === PARSE_FAILURE) {
     getTargetPath(parserRes.value.input),
   );
   const swagger = parse(file) as Swagger;
-  console.log(swaggerToTs(swagger));
+  const ts = swaggerToTs(swagger);
+  console.log(ts);
 }

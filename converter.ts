@@ -6,6 +6,8 @@ import {
   SwaggerSchemaProperty,
   SwaggerRequestTypes,
   SwaggerReferenceProperty,
+  isSwaggerEnumProperty,
+  SwaggerEnumProperty,
 } from "./types.ts";
 import { getDefinitionName, findDefinition } from "./findDefinition.ts";
 
@@ -40,6 +42,18 @@ export const primitiveToTs = (property: SwaggerPrimitiveProperty): string => {
   }
 };
 
+export const enumToTs = (property: SwaggerEnumProperty): string => {
+  switch (property.type) {
+    case "integer":
+      return property.enum.join(" | ");
+    case "string":
+      return property.enum.map((str) => `"${str}"`).join(" | ");
+    default:
+      const _exhaustiveCheck: never = property.type;
+      return _exhaustiveCheck;
+  }
+};
+
 /**
  * convert swagger object type to typescript object type
  * 
@@ -53,7 +67,9 @@ export const objectToTsParams = (
   let ts = "";
   Object.keys(properties).forEach((key) => {
     const property = properties[key];
-    if (isSwaggerPrimitiveProperty(property)) {
+    if (isSwaggerEnumProperty(property)) {
+      ts += `  ${key}: ${enumToTs(property)};\n`;
+    } else if (isSwaggerPrimitiveProperty(property)) {
       ts += `  ${key}: ${primitiveToTs(property)};\n`;
     } else {
       switch (property.type) {
