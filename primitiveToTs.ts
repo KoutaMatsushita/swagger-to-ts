@@ -16,6 +16,7 @@ export function primitiveToTs(property: SwaggerPrimitiveProperty): string {
     case "long":
     case "float":
     case "double":
+    case "number":
       return "number";
     case "string":
     case "byte":

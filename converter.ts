@@ -3,7 +3,6 @@ import {
   isSwaggerPrimitiveProperty,
   Swagger,
   SwaggerSchemaProperty,
-  SwaggerRequestTypes,
   SwaggerReferenceProperty,
   isSwaggerEnumProperty,
   SwaggerArrayProperty,
@@ -56,28 +55,9 @@ export function objectToTsParams(
             ts += `${key}: ${primitiveToTs(property.items)}[];\n`;
           } else {
             if (property.items.type == "object") {
-              let _ts = "";
-              const nestedProperties = property.items.properties;
-              Object.keys(nestedProperties).forEach((_key) => {
-                const nestedProperty = nestedProperties[_key];
-                switch (nestedProperty.type) {
-                  case "object":
-                    _ts += `${_key}: {\n${
-                      objectToTsParams(swagger, nestedProperty)
-                    };\n};\n`;
-                    break;
-                  case "array":
-                    _ts += `${_key}: ${arrayToTs(swagger, nestedProperty)}`;
-                    break;
-                  case undefined:
-                    queue.push(nestedProperty);
-                    _ts += `${_key}: ${getDefinitionName(nestedProperty)};\n`;
-                    break;
-                  default:
-                    break;
-                }
-              });
-              ts += `${key}: {\n${_ts}};\n`;
+              ts += `${key}: {\n${
+                objectToTsParams(swagger, property.items)
+              }};\n`;
             } else if (property.items.type == "array") {
               throw Error();
             } else {
@@ -90,10 +70,8 @@ export function objectToTsParams(
           ts += `${key}: {\n${objectToTsParams(swagger, property)}};\n`;
           break;
         case undefined:
-          createTs(
-            swagger,
-            findDefinition(swagger, property),
-          );
+          queue.push(property);
+          ts += `${key}: ${getDefinitionName(property)};\n`;
           break;
         default:
           console.warn(properties[key]);
@@ -123,7 +101,7 @@ function createTs(
   switch (property.type) {
     case "object":
       ts += "{\n";
-      ts += objectToTsParams(swagger, property);
+      ts += objectToTsParams(swagger, property as SwaggerObjectProperty);
       ts += "};";
       break;
     case "array":
@@ -139,7 +117,7 @@ function createTs(
       }
       break;
     default:
-      console.warn(property);
+      console.warn("unknown property", property);
       throw Error(`unknown type: ${property.type}`);
   }
 
@@ -159,7 +137,7 @@ function createTs(
  */
 function schemaToTs(
   swagger: Swagger,
-  schema: SwaggerSchemaProperty,
+  { key, schema }: { key: string; schema: SwaggerSchemaProperty },
 ): string[] {
   switch (schema!.type) {
     case "array":
@@ -170,31 +148,37 @@ function schemaToTs(
         createTs(swagger, findDefinition(swagger, schema.items));
         return tsTypes;
       } else {
-        throw Error(`unknown type: ${schema.type}`);
+        createTs(swagger, { key, property: schema });
+        return tsTypes;
       }
     case "object":
-      return Object.keys(schema.properties).flatMap((key) =>
-        schemaToTs(swagger, schema.properties[key])
-      );
+      createTs(swagger, { key, property: schema });
+      return tsTypes;
     case undefined:
       createTs(swagger, findDefinition(swagger, schema));
       return tsTypes;
     default:
+      console.warn("unknown schema", schema);
       throw Error(`unknown type: ${schema.type}`);
   }
 }
 
 export const swaggerToTs = (swagger: Swagger): string => {
   tsTypes.length = 0;
-  Object.keys(swagger.paths).forEach((key) => {
-    Object.keys(swagger.paths[key]).forEach(async (method) => {
-      const schema = swagger.paths[key][method as SwaggerRequestTypes]
-        .responses[200]?.schema;
-      if (!schema) {
-        return;
-      }
-      schemaToTs(swagger, schema);
-    });
+  // Object.keys(swagger.paths).forEach((key) => {
+  //   Object.keys(swagger.paths[key]).forEach(async (method) => {
+  //     const schema = swagger.paths[key][method as SwaggerRequestTypes]
+  //       .responses[200]?.schema ??
+  //       swagger.paths[key][method as SwaggerRequestTypes]
+  //         .responses[201]?.schema;
+  //     if (!schema) {
+  //       return;
+  //     }
+  //     schemaToTs(swagger, schema);
+  //   });
+  // });
+  Object.keys(swagger.definitions).forEach((key) => {
+    schemaToTs(swagger, { key, schema: swagger.definitions[key] });
   });
   return tsTypes.join("\n\n");
 };

@@ -1,5 +1,9 @@
 # swagger-to-ts
 
+convert swagger.yml `definitions` to TypeScript type definition.
+
+exported code is format by 'prettier'.
+
 ## How to use
 
 ```sh

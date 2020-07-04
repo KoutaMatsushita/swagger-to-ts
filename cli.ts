@@ -3,6 +3,10 @@ import {
   EarlyExitFlag,
   Option,
 } from "https://deno.land/x/args@2.0.2/flag-types.ts";
+import {
+  prettier,
+  prettierPlugins,
+} from "https://denolib.com/denolib/prettier/prettier.ts";
 import { Text } from "https://deno.land/x/args@2.0.2/value-types.ts";
 import { PARSE_FAILURE } from "https://deno.land/x/args@2.0.2/symbols.ts";
 import * as path from "https://deno.land/std/path/mod.ts";
@@ -46,7 +50,10 @@ if (parserRes.tag === PARSE_FAILURE) {
   for (const walk of expandGlobSync(getTargetPath(parserRes.value.input))) {
     const file = readFileStrSync(walk.path);
     const swagger = parse(file) as Swagger;
-    const ts = swaggerToTs(swagger);
+    const ts = prettier.format(swaggerToTs(swagger), {
+      parser: "babel",
+      plugins: prettierPlugins,
+    });
     console.log(ts);
   }
 }

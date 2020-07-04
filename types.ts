@@ -5,6 +5,7 @@ export const SwaggerPrimitives = [
   "long",
   "float",
   "double",
+  "number",
   "string",
   "byte",
   "binary",
@@ -73,7 +74,7 @@ export type Swagger = {
     [P in string]: {
       [P in SwaggerRequestTypes]: {
         responses: {
-          200?: {
+          [P in 200 | 201]?: {
             schema: SwaggerSchemaProperty;
           };
         };
