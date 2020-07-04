@@ -1,5 +1,4 @@
 import {
-  SwaggerPrimitiveProperty,
   SwaggerObjectProperty,
   isSwaggerPrimitiveProperty,
   Swagger,
@@ -7,76 +6,39 @@ import {
   SwaggerRequestTypes,
   SwaggerReferenceProperty,
   isSwaggerEnumProperty,
-  SwaggerEnumProperty,
   SwaggerArrayProperty,
 } from "./types.ts";
 import { getDefinitionName, findDefinition } from "./findDefinition.ts";
+import { primitiveToTs } from "./primitiveToTs.ts";
+import { enumToTs } from "./enumToTs.ts";
 
 const queue: SwaggerReferenceProperty[] = [];
 const convertedKeys: string[] = [];
 const tsTypes: string[] = [];
 
-/**
- * convert swagger primitive type to typescript primitive type
- * 
- * @param property target property
- */
-function primitiveToTs(property: SwaggerPrimitiveProperty): string {
-  switch (property.type) {
-    case "integer":
-    case "long":
-    case "float":
-    case "double":
-      return "number";
-    case "string":
-    case "byte":
-    case "binary":
-    case "date":
-    case "dateTime":
-    case "password":
-      return "string";
-    case "boolean":
-      return "boolean";
-    default:
-      const _exhaustiveCheck: never = property.type;
-      return _exhaustiveCheck;
-  }
-}
-
-function enumToTs(property: SwaggerEnumProperty): string {
-  switch (property.type) {
-    case "integer":
-      return property.enum.join(" | ");
-    case "string":
-      return property.enum.map((str) => `"${str}"`).join(" | ");
-    default:
-      const _exhaustiveCheck: never = property.type;
-      return _exhaustiveCheck;
-  }
-}
-
-function arrayToTs(
+export function arrayToTs(
   swagger: Swagger,
   property: SwaggerArrayProperty,
 ): string {
   if (isSwaggerPrimitiveProperty(property.items)) {
     return `${primitiveToTs(property.items)}[]`;
   } else if (property.items.type == "object") {
-    return `${objectToTsParams(swagger, property.items)}[]`;
+    return `{\n${objectToTsParams(swagger, property.items)}}[]`;
   } else if (property.items.type == "array") {
     return `${arrayToTs(swagger, property.items)}[]`;
   } else {
     queue.push(property.items);
     return `${getDefinitionName(property.items)}[]`;
   }
-} /**
+}
+
+/**
  * convert swagger object type to typescript object type
  * 
  * @param swagger original schema
  * @param properties target object property
  */
-
-function objectToTsParams(
+export function objectToTsParams(
   swagger: Swagger,
   { properties }: SwaggerObjectProperty,
 ): string {
@@ -84,14 +46,14 @@ function objectToTsParams(
   Object.keys(properties).forEach((key) => {
     const property = properties[key];
     if (isSwaggerEnumProperty(property)) {
-      ts += `  ${key}: ${enumToTs(property)};\n`;
+      ts += `${key}: ${enumToTs(property)};\n`;
     } else if (isSwaggerPrimitiveProperty(property)) {
-      ts += `  ${key}: ${primitiveToTs(property)};\n`;
+      ts += `${key}: ${primitiveToTs(property)};\n`;
     } else {
       switch (property.type) {
         case "array":
           if (isSwaggerPrimitiveProperty(property.items)) {
-            ts += `  ${key}: ${primitiveToTs(property.items)}[];\n`;
+            ts += `${key}: ${primitiveToTs(property.items)}[];\n`;
           } else {
             if (property.items.type == "object") {
               let _ts = "";
@@ -100,7 +62,7 @@ function objectToTsParams(
                 const nestedProperty = nestedProperties[_key];
                 switch (nestedProperty.type) {
                   case "object":
-                    _ts += `${_key}: {\n  ${
+                    _ts += `${_key}: {\n${
                       objectToTsParams(swagger, nestedProperty)
                     };\n};\n`;
                     break;
@@ -115,17 +77,17 @@ function objectToTsParams(
                     break;
                 }
               });
-              ts += `  ${key}: {\n${_ts}};\n`;
+              ts += `${key}: {\n${_ts}};\n`;
             } else if (property.items.type == "array") {
               throw Error();
             } else {
               queue.push(property.items);
-              ts += `  ${key}: ${getDefinitionName(property.items)}[];\n`;
+              ts += `${key}: ${getDefinitionName(property.items)}[];\n`;
             }
           }
           break;
         case "object":
-          ts += `  ${key}: {\n  ${objectToTsParams(swagger, property)}  };\n`;
+          ts += `${key}: {\n${objectToTsParams(swagger, property)}};\n`;
           break;
         case undefined:
           createTs(

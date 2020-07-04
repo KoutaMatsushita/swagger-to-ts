@@ -17,7 +17,7 @@ export const SwaggerPrimitives = [
 export type SwaggerPrimitiveTypes = typeof SwaggerPrimitives[number];
 
 export type SwaggerReferenceProperty = {
-  type: undefined;
+  type?: undefined;
   $ref: string;
 };
 
